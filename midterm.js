@@ -1,12 +1,13 @@
-//var http = require('http');
 var repl = require('repl');
 var request = require('superagent');
 var __ = require('underscore');
 var url = "https://api.coinbase.com/v1/currencies/exchange_rates";
 
+var orders_list = [];
+
 // REPL prompt with eval = my customized PaulEval()
 var replPrompt = repl.start({
-	prompt: "Paul-Coinbase >", 
+	prompt: "Paul-Coinbase> ", 
 	ignoreUndefined: true,
 	eval: PaulEval});
 
@@ -51,6 +52,7 @@ function currency_exchange(amount, currency, action){
 		+ rate_btc_curr + " " + "BTC/" + currency.toUpperCase() + " ("
 		+ rate_curr_btc + " BTC)"; 
 		
+		  addOrder(action, amount, currency);
 		  console.log(display);
 		}});
  			
@@ -58,8 +60,23 @@ function currency_exchange(amount, currency, action){
 
 }
 
+function addOrder(action, amount, currency){
+	var curr = "BTC"
+	if(currency != null){ curr = currency;}
+
+	var newOrder = {
+				'timestamp': new Date(),
+				'action': action.toUpperCase(),
+				'amount': amount,
+				'currency': curr.toUpperCase(),
+				'status': 'UNFILLED'
+	}
+	orders_list.push(newOrder);
+} 
+
+
 // Find the Rate as KEY in the Json file. Return Value.
-var find_rate = function(json, unit){
+function find_rate(json, unit){
 	return json[unit];
 }
 
@@ -108,6 +125,7 @@ function BUY(args){
 	  if(args[1] > 0){
 		var display = "Order to " + action + " " 
 			+ amount + " BTC queued";
+		addOrder(action, amount, null);
 	  	console.log(display);
 	  }
 	  else{
@@ -134,6 +152,7 @@ function SELL(args){
           if(args[1] > 0){
                 var display = "Order to " + action + " " 
 			+ amount + " BTC queued";
+		addOrder(action, amount, null);
                 console.log(display);
           }
           else{
@@ -144,8 +163,20 @@ function SELL(args){
         return;
 }
 
-var ORDERS = function(){
-	console.log( "ORDERS function");}
+// ORDERS Function
+// Display Current Orders with Descending order
+// Save into CVS file 
+function ORDERS(args){
+	__.each(orders_list, 
+		function(err, index){
+		  order = orders_list[index];
+		  display = order.timestamp + " : " + order.action + " " 
+		+ order.amount + " " + order.currency + " : " + order.status;
+	      	 
+		  console.log("\n === CURRENT ORDERS === ");
+		  console.log(display);
+		 })
+}
 
 
 
