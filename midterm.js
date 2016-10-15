@@ -167,13 +167,14 @@ function SELL(args){
 // Display Current Orders with Descending order
 // Save into CVS file 
 function ORDERS(args){
+	console.log("\n === CURRENT ORDERS === ");
+
 	__.each(orders_list, 
 		function(err, index){
 		  order = orders_list[index];
 		  display = order.timestamp + " : " + order.action + " " 
-		+ order.amount + " " + order.currency + " : " + order.status;
-	      	 
-		  console.log("\n === CURRENT ORDERS === ");
+		+ order.amount + " " + order.currency + " : " + order.status;	 
+		  
 		  console.log(display);
 		 })
 }
