@@ -17,7 +17,9 @@ function eval(cmd, context, file, callback){
 			
 	
 	if(execute==='BUY'){return BUY(cmd_list);}
-	if(execute==='SELL'){return SELL();}
+	if(execute==='SELL'){
+		
+	}
 	if(execute==='ORDERS'){return ORDERS();}
 
 	
@@ -29,27 +31,29 @@ function eval(cmd, context, file, callback){
 function current_exchange(amount, currency){
 	console.log("Amount = " + amount);
 	console.log("currentcy = " + currency);
-	var unit = "btc";
-	var result = "0"
+	var unit = "btc_to_usd";
+	var result = "";
 	// Update new API Json
- 	var xjson=request.get(url).end(function(err,res){ 
-		if(err) throw err; 
-		return res;});
-	console.log(xjson);
-//******************************
-		if(currency!=null){
-		unit = currency.trim().toLowerCase() + "_to_btc";
-		console.log("Unit=" + unit);
-		result = find_rate(xjson,unit);
-	}
+ 	var xjson = 
+	request.get(url)
+	  .set('Accept', 'application/json')
+          .end(function(error, response){
+		var xjson = response.body;
+		//console.log(xjson);
+		if(currency != null){
+		  unit = currency.trim().toLowerCase() + "_to_btc";
+		  console.log(find_rate(xjson, unit));
+		}});
  
 	return result;
 
 }
 
-//var find_rate = function(json_file, unit){
-//	return __.filter(json_file, function(data){ return data.unit;}); 
-// }
+var find_rate = function(json, unit){
+	//return __.filter(json, function(data){ return data.unit;}); 
+	console.log(unit);	
+	console.log(json[unit]);
+}
 
 var BUY = function(parameter){
 	console.log("BUY function");
