@@ -1,9 +1,18 @@
 var repl = require('repl');
 var request = require('superagent');
 var __ = require('underscore');
+var csv = require('fast-csv');
+var fs = require('fs');
 var url = "https://api.coinbase.com/v1/currencies/exchange_rates";
 
 var orders_list = [];
+
+// Get the json for currency unit
+var currency_unit =  request.get('https://api.coinbase.com/v1/currencies')
+          		.set('Accept', 'application/json')
+          		.end(function(error, response){
+               		currency_unit = response.body;});
+	
 
 // REPL prompt with eval = my customized PaulEval()
 var replPrompt = repl.start({
@@ -17,9 +26,11 @@ function PaulEval(cmd, context, file, callback){
 	var execute = cmd_list[0].trim().toUpperCase(); // BUY || SELL || ORDER
 	
 	// EXECUTE based on the command. Args = command_list
-	if(execute==='BUY'){return BUY(cmd_list);}
-	if(execute==='SELL'){return SELL(cmd_list);}
-	if(execute==='ORDERS'){return ORDERS();}
+	switch(execute){
+	  case "BUY": BUY(cmd_list); break;
+	  case "SELL": SELL(cmd_list); break;
+	  case "ORDERS": ORDERS(); break;
+	}
 
 	return;	
 }
@@ -44,13 +55,13 @@ function currency_exchange(amount, currency, action){
 		  
 		  // Display exchange Rate
 		  console.log("\n***Current Exchange Rates***");
-		  console.log(rate_btc_curr + " " + unit_btc_curr);
-		  console.log(rate_curr_btc + " " + unit_curr_btc + "\n");
+		  console.log(rate_btc_curr + " " + unit_btc_curr + 
+		  "	<=>	" + rate_curr_btc + " " + unit_curr_btc + "\n");
 			
 		  // Display order to screen
 		  var display = "Order to " + order + " worth of BTC queued @ "
 		+ rate_btc_curr + " " + "BTC/" + currency.toUpperCase() + " ("
-		+ rate_curr_btc + " BTC)"; 
+		+ rate_curr_btc + " BTC)\n"; 
 		
 		  addOrder(action, amount, currency);
 		  console.log(display);
@@ -84,30 +95,27 @@ function find_rate(json, unit){
 function checkCurrencyValid(currency,action, amount){
 	var isValid = false;	// default is NOT valid
 	
-	request.get('https://api.coinbase.com/v1/currencies')
-          .set('Accept', 'application/json')
-          .end(function(error, response){
-		var check_json = response.body
-		__.filter(check_json,
-			 function(error, index){
-			   if(check_json[index][1] === currency){
-			       isValid = true;
-			       // Do Currency Exchange when valid is confirmed
-				currency_exchange(amount, currency.toLowerCase()                                , action);
+	__.filter(currency_unit,
+		 function(error, index){
+		    if(currency_unit[index][1] === currency){
+			 isValid = true;
+			 // Do Currency Exchange when valid is confirmed
+			 currency_exchange(amount, currency.toLowerCase()                                , action);
 
-				return;
-			    }			
-			  }	
-		);
-		// If not valid, display error.
-		if(isValid === false){ 
-		  console.log("No known exchange rate for BTC/" 
-				+ currency + ". Order failed");
-		}
-	});	
-
+			return;
+		     }			
+		 }	
+	);
+	// If not valid, display error.
+	if(isValid === false){ 
+	  console.log("No known exchange rate for BTC/" 
+		+ currency + ". Order failed\n");
+	}
 	return;
-}
+};	
+
+	
+
 
 // BUY function with args = command list
 // args[0] = action command = BUY ( BUY || SELL || ORDERS )
@@ -124,12 +132,12 @@ function BUY(args){
 	else if(args[2] == null){
 	  if(args[1] > 0){
 		var display = "Order to " + action + " " 
-			+ amount + " BTC queued";
+			+ amount + " BTC queued\n";
 		addOrder(action, amount, null);
 	  	console.log(display);
 	  }
 	  else{
-	    console.log("Invalid or No Amount specified. Please try again!");
+	    console.log("Invalid or No Amount specified. Please try again!\n");
 	  }
 	}
 	
@@ -151,12 +159,12 @@ function SELL(args){
         else if(args[2] == null){
           if(args[1] > 0){
                 var display = "Order to " + action + " " 
-			+ amount + " BTC queued";
+			+ amount + " BTC queued\n";
 		addOrder(action, amount, null);
                 console.log(display);
           }
           else{
-            console.log("Invalid or No Amount specified. Please try again!");
+            console.log("Invalid or No Amount specified. Please try again!\n");
           }
         }
 
@@ -167,16 +175,27 @@ function SELL(args){
 // Display Current Orders with Descending order
 // Save into CVS file 
 function ORDERS(args){
+	var csvStream = csv.format({headers:true,quoteHeaders:true}),
+	writeableStream = fs.createWriteStream("orders.csv");
+	writeableStream.on("finish",function(){console.log("ORDERS list saved to orders.csv successfully!.")});
+	csvStream.pipe(writeableStream);
+
 	console.log("\n === CURRENT ORDERS === ");
 
 	__.each(orders_list, 
 		function(err, index){
 		  order = orders_list[index];
 		  display = order.timestamp + " : " + order.action + " " 
-		+ order.amount + " " + order.currency + " : " + order.status;	 
-		  
+		+ order.amount + " " + order.currency + " : " + order.status;	 		  
 		  console.log(display);
+
+		  csvStream.write({time: order.timestamp, action: order.action, 
+				amount: order.amount, 
+				currency: order.currency, status: order.status})
 		 })
+
+	csvStream.end();	
+	
 }
 
 
